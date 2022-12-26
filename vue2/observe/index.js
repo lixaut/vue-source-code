@@ -1,7 +1,23 @@
+import { newArrayProto } from "./array"
 
 class Observer {
   constructor(data) {
-    this.walk(data)
+    // 防止陷入循环
+    Object.defineProperty(data, '__ob__', {
+      value: this,
+      enumerable: false
+    })
+    data.__ob__ = this
+    // 劫持数组性能差
+    if (Array.isArray(data)) {
+      data.__proto__ = newArrayProto
+      this.observeArray(data)
+    } else {
+      this.walk(data)
+    }
+  }
+  observeArray(data) {
+    data.forEach(item => observe(item))
   }
   walk(data) {
     // 重新定义属性
@@ -29,6 +45,10 @@ export function observe(data) {
   // 对象劫持
   if (typeof data !== 'object' || data == null) {
     return
+  }
+  // 已被劫持过
+  if (data.__ob__ instanceof Observer) {
+    return data.__ob__
   }
   // 如果被劫持过，就不需要再劫持（用实例来判断是否被劫持过）
   return new Observer(data)
